@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import logging
 import socket
 import struct
@@ -60,7 +58,7 @@ class RemotePixelPusher(object):
 
   def _push_pixels(self):
     """This sends a pixel packet and then reschedules itself."""
-    next_packet = self.packet_gen.next()
+    next_packet = self.packet_gen.__next__()
     message = struct.pack("i", self.seq_number) + bytearray(next_packet)
     bytes_sent = self.sock.sendto(message, self.pp_addr())
     self.seq_number += 1

@@ -1,6 +1,6 @@
 # ctypes for derpbit protocol.
 
-import ctypes;
+import ctypes
 from ctypes import c_uint8, c_uint16, c_uint32
 
 BROADCAST_PORT = 7331
@@ -37,7 +37,15 @@ class PixelPusher(ctypes.Structure):
     ('pixels_per_strip', c_uint16),
     ('update_period', c_uint32),   # microseconds
     ('power_total', c_uint32),     # pwm units  
-    ('delta_sequence', c_uint32)   # difference between received and expected sequence numbers
+    ('delta_sequence', c_uint32),  # difference between received and expected sequence numbers
+    ('controller_ordinal', c_uint32), # ordering number for this controller.
+    ('group_ordinal', c_uint32),
+    ('artnet_uinverse', c_uint16), # configured artnet starting point for this controller
+    ('artnet_channel', c_uint16),
+    ('my_port', c_uint16),
+    ('strip_flags', c_uint8 * 8), # flags for each strip, for up to eight strips
+    ('pusher_flags', c_uint32),
+    ('segments', c_uint32),
   ]
 
 class LumiaBridge(ctypes.Structure):
