@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Controller</title>
+
+
+
+  <style>
+    .pusher {
+      display: inline-block;
+      width: 22em;
+    }
+    ul {
+      list-style: none;
+      width: 20em;
+    }
+    li {
+      display: inline-block;
+      border-bottom: 1px solid rgb(200,200,200);
+    }
+    li:after {
+      display: inline-block;
+      width: 8em;
+      content: attr(data-value);
+      margin: 2px 0 2px 1em;
+    }
+    li:before {
+      display: inline-block;
+      width: 10em;
+      text-align:right;
+      content:attr(data-key);
+      color: rgb(80,80,80);
+    }
+    canvas {
+      display: block;
+      border: 1px solid rgb(150,150,150);
+    }
+  </style>
+</head>
+<body>
+  <h3>Output:</h3>
+
+  <output></output>
+
+  <div class="pusher-container"></div>
+<script>
+  function useIt() {
+    var content = document.querySelector('template').content;
+    // Update something in the template DOM.
+    var span = content.querySelector('span');
+    span.textContent = parseInt(span.textContent) + 1;
+    document.querySelector('#container').appendChild(
+        document.importNode(content, true));
+  }
+</script>
+
+<template id="pusher-template">
+  <div class="pusher">PusherID <span class="mac"></span>
+    <ul class="props">
+      <li data-key="group_ordinal"></li>
+      <li data-key="controller_ordinal"></li>
+      <li data-key="max_strips_per_packet"></li>
+      <li data-key="strips_attached"></li>
+      <li data-key="flags"></li>
+    </ul>
+  </div>
+</template>
+
+  <script>
+    function createPusher(mac){
+        var pusher,
+            template = document.querySelector('#pusher-template').content;
+        template.querySelector('.mac').textContent = mac;
+        template.querySelector('div').dataset['mac'] = mac;
+        pusher = document.importNode(template, true);
+        document.querySelector('.pusher-container').appendChild(pusher);
+        return pusher;
+    }
+
+    function updatePusher(msg){
+        var mac = Object.keys(msg.data)[0],
+            dict = msg.data[mac],
+            pusher = document.querySelector('.pusher[data-mac="'+mac+'"'),
+            prop, propEls;
+
+        if (!pusher){
+            pusher = createPusher(mac);
+        }
+        propEls = [].slice.apply(pusher.querySelectorAll('li'));
+        propEls.forEach(function(e){
+            console.log("E:",e,dict[e.dataset.key]);
+            e.dataset.value = dict[e.dataset.key];
+        });
+    }
+
+
+    var ws = new WebSocket("ws://localhost:8888/ws");
+
+    function output(txt){
+        var e = document.createElement('div');
+        e.textContent = txt;
+        document.querySelector('output').appendChild(e);
+    }
+    ws.onmessage = function(m){
+        updatePusher(JSON.parse(m.data));
+        //output(m.data);
+    }
+  </script>
+
+
+<canvas width="300" height="300"></canvas>
+<label>Luminace <input type="range" min="0" max="100" value="23"> </input></label>
+<script src="d3.js" charset="UTF-8"></script>
+<script>
+
+
+var canvas = document.querySelector('canvas');
+var ctx = canvas.getContext('2d'),
+    dat = ctx.createImageData(300,300);
+
+function update(l){
+
+    var x,y,
+        idx,
+        rgb,
+        c_x = dat.width/2,
+        c_y = dat.height/2;
+
+    for(x = 0; x < dat.width; x++) {
+        for(y = 0; y < dat.height; y++) {
+            idx = (y * dat.width + x) * 4;
+
+            rgb = d3.lab(l, x - c_x, y - c_y).rgb();
+            if(rgb.r >= 0 && rgb.g >= 0 && rgb.b >= 0){
+                dat.data[idx+0] = rgb.r;
+                dat.data[idx+1] = rgb.g;
+                dat.data[idx+2] = rgb.b;
+                dat.data[idx+3] = 255;
+            }else{
+                dat.data[idx+3] =0;
+            }
+
+        }
+    }
+    ctx.putImageData(dat, 0, 0);
+}
+
+document.querySelector('input[type=range]').addEventListener('change', function(e){
+    console.log('updated to ', this.value);
+    update(this.value);
+});
+
+canvas.addEventListener('click', function(e){
+        var mouseX, mouseY;
+
+        if(e.offsetX) {
+            mouseX = e.offsetX;
+            mouseY = e.offsetY;
+        }
+        else if(e.layerX) {
+            mouseX = e.layerX;
+            mouseY = e.layerY;
+        }
+        var c = ctx.getImageData(mouseX, mouseY, 1, 1).data;
+        console.log('rgb',c);
+
+        msg = JSON.stringify({'mac':'...', 'red': c[0], 'green':c[1], 'blue': c[3], 'orange':0, 'white':0 });
+        ws.send(msg);
+});
+
+
+update(40);
+</script>
+</body>
+</html>

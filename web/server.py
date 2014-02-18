@@ -4,11 +4,11 @@ import logging
 from lib.events import EventsMixin, EventBus, Listener, Event, EventHandlerFunction
 from lib.mixin_utils import MixedClassMeta
 
-from tornado import ioloop
-from tornado import websocket
+from tornado import websocket, web, ioloop
+
 import tornado
 import tornado.httpserver
-import tornado.web
+import os
 
 from net.listen_util import PusherIndex
 
@@ -60,6 +60,12 @@ class PusherWebSocket(EventsMixin,
         self.write_message(data)
 
 
+class NocacheStaticFileHandler(web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        # Disable cache
+        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+
+
 
 if __name__ == '__main__':
     # Setup logging for the signal bus
@@ -70,9 +76,18 @@ if __name__ == '__main__':
     pusher_index = PusherIndex()
 
     # Setup web application
+
+    static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),'static')
+    if not os.path.exists(static_path):
+        logging.error("Can't find static path? %s", static_path)
+
     application = tornado.web.Application([
         (r'/ws', PusherWebSocket),
+        #(r"/(.*)", web.StaticFileHandler, {"path": os.path.join(__file__, '..', 'static')}),
+        (r"/static/(.*)", NocacheStaticFileHandler, {"path": static_path}),
+
     ])
+    logging.info('static path: %s', static_path)
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(8888)
 
